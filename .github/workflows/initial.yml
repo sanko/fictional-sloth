@@ -1,0 +1,109 @@
+name: C Test Suite CI
+
+on:
+  # Triggers the workflow on push or pull request events to the 'main' branch
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  # Allows you to run this workflow manually from the Actions tab in GitHub
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    # Name of the job, dynamically set based on OS and architecture
+    name: ${{ matrix.os }} (${{ matrix.arch }}) - ${{ matrix.compiler || 'Default' }}
+
+    # Defines the runner environment for each matrix combination
+    runs-on: ${{ matrix.os }}
+
+    # Strategy to run the job across multiple configurations
+    strategy:
+      # Prevents immediate failure of the entire workflow if one matrix job fails
+      # All jobs will run, and results will be reported for each.
+      fail-fast: false
+      matrix:
+        # Define the operating systems to run on
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        # Define the default architecture for all OSes
+        arch: [x64]
+        # Define compilers for Windows
+        compiler: [msvc, gcc]
+        exclude:
+          # Exclude combinations where 'compiler' is defined but not on Windows
+          - os: ubuntu-latest
+            compiler: msvc
+          - os: ubuntu-latest
+            compiler: gcc # Handled by default Linux/macOS step
+          - os: macos-latest
+            compiler: msvc
+          - os: macos-latest
+            compiler: gcc # Handled by default Linux/macOS step
+        include:
+          # Add ARM64 runners for Linux (Ubuntu) - these will use GCC by default
+          - os: ubuntu-latest
+            arch: arm64
+            compiler: gcc # Explicitly state GCC for clarity
+          # Add ARM64 runners for macOS - these will use Clang (aliased to gcc) by default
+          - os: macos-latest
+            arch: arm64
+            compiler: gcc # Explicitly state GCC (Clang) for clarity
+          # Default compiler for Linux and macOS (GCC/Clang)
+          - os: ubuntu-latest
+            arch: x64
+            compiler: gcc
+          - os: macos-latest
+            arch: x64
+            compiler: gcc
+
+    steps:
+    - name: Checkout code
+      # Uses the official action to checkout your repository's code
+      uses: actions/checkout@v4
+
+    - name: Set up MinGW-w64 (GCC) on Windows
+      if: matrix.os == 'windows-latest' && matrix.compiler == 'gcc'
+      uses: egor-tensin/setup-mingw@v2
+      with:
+        version: 'latest' # Installs the latest MinGW-w64 distribution
+
+    - name: Compile and Run (Linux/macOS/Windows GCC)
+      # This step runs on Ubuntu, macOS, and Windows when compiler is GCC
+      if: matrix.compiler == 'gcc'
+      run: |
+        echo "Compiling on ${{ matrix.os }} with ${{ matrix.arch }} architecture using GCC..."
+        # Compile the C code using GCC (or Clang on macOS, which is aliased to gcc)
+        # -g: Include debug information for better debugging if needed
+        # -Wall -Wextra: Enable extensive warnings to catch potential issues
+        # -Werror: Treat all warnings as errors, ensuring clean code
+        # -std=c11: Compile using the C11 standard
+        # -lm: Link against the math library, required for functions like `fabs`
+        # -o cross: Specify the output executable name as 'cross'
+        gcc -o cross -g -Wall -Wextra -Werror -std=c11 cross.c -lm
+        
+        echo "Running tests..."
+        # Execute the compiled test suite
+        ./cross
+
+    - name: Compile and Run (Windows MSVC)
+      # This step runs only on Windows runners when compiler is MSVC
+      if: matrix.os == 'windows-latest' && matrix.compiler == 'msvc'
+      # Use the 'cmd' shell as 'cl.exe' (MSVC compiler) is typically found there
+      shell: cmd
+      run: |
+        echo "Compiling on Windows with ${{ matrix.arch }} architecture using MSVC..."
+        # Set up the MSVC environment variables
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        # Compile the C code using MSVC (cl.exe)
+        # /Zi: Generate debug information
+        # /W4: Enable level 4 warnings
+        # /WX: Treat warnings as errors
+        # /std:c11: Compile using the C11 standard
+        # /Fe: Specify the output executable name as 'cross.exe'
+        cl /Zi /W4 /WX /std:c11 cross.c /Fe:cross.exe
+        
+        echo "Running tests..."
+        # Execute the compiled test suite
+        .\cross.exe
