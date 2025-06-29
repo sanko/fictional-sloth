@@ -95,18 +95,16 @@ jobs:
       if: matrix.os == 'windows-latest' && matrix.compiler == 'msvc'
       # Use the 'cmd' shell as 'cl.exe' (MSVC compiler) is typically found there
       shell: cmd
-      run: |
-        echo "Compiling on Windows with ${{ matrix.arch }} architecture using MSVC..."
         # Set up the MSVC environment variables
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         # Compile the C code using MSVC (cl.exe)
         # /Zi: Generate debug information
         # /W4: Enable level 4 warnings
         # /WX: Treat warnings as errors
         # /std:c11: Compile using the C11 standard
         # /Fe: Specify the output executable name as 'cross.exe'
+      run: |
+        echo "Compiling on Windows with ${{ matrix.arch }} architecture using MSVC..."
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         cl /Zi /W4 /WX /std:c11 cross.c /Fe:cross.exe
-        
         echo "Running tests..."
-        # Execute the compiled test suite
         .\cross.exe
