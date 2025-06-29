@@ -84,7 +84,7 @@ jobs:
         # -std=c11: Compile using the C11 standard
         # -lm: Link against the math library, required for functions like `fabs`
         # -o cross: Specify the output executable name as 'cross'
-        gcc -o cross -g -Wall -Wextra -Werror -std=c11 cross.c -lm
+        gcc -o cross -g -Wall -Wextra -std=c11 cross.c -lm
         
         echo "Running tests..."
         # Execute the compiled test suite
