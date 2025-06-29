@@ -1,4 +1,4 @@
-name: C Test Suite CI
+name: C FFI Test Suite CI
 
 on:
   # Triggers the workflow on push or pull request events to the 'main' branch
@@ -67,7 +67,10 @@ jobs:
       if: matrix.os == 'windows-latest' && matrix.compiler == 'gcc'
       uses: egor-tensin/setup-mingw@v2
       with:
-        version: 'latest' # Installs the latest MinGW-w64 distribution
+        # Changed 'latest' to a specific stable version to avoid installation issues
+        version: '12.2.0'
+        # Add a toolchain to ensure the correct architecture is installed
+        toolchain: 'x86_64-posix-seh' # Common choice for 64-bit Windows GCC
 
     - name: Compile and Run (Linux/macOS/Windows GCC)
       # This step runs on Ubuntu, macOS, and Windows when compiler is GCC
